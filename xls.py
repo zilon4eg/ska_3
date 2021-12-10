@@ -53,7 +53,7 @@ def dir_list(root_path):
 def directories_access(root_path):
     access = []
     for directory in dir_list(root_path):
-        path = f'\\\\fs\SHARE\Documents\{directory}'
+        path = f'{root_path}\\{directory}'
         for dir in directory_access(path):
             access.append(dir)
     return access
@@ -72,7 +72,7 @@ def auto_size_column(book_path, sheet_name):
 
 
 def difference_lists(list0, list1):
-    """вычитает один список из другого"""
+    """вычитает один список списков из другого"""
     set0 = set(map(lambda x: tuple(x), list0))
     set1 = set(map(lambda x: tuple(x), list1))
     set_result = set0 - set1
@@ -89,7 +89,7 @@ def ws_now(work_book):
 
 def number_to_letter(number):
     """преобразует число в букву"""
-    return 'ABCDEFG'[number - 1]
+    return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[number - 1]
 
 
 def coloring_on_difference(ws, difference, data, selected_color):
@@ -116,7 +116,6 @@ def add_missing_line(ws, difference, data, selected_color):
     :param data: данные рабочего листа
     :param selected_color: цвет в который красим (красный)
     """
-    list_missing_line = []
     line_for_write = len(data) + 4
     for str_data in data:
         for str_diff in difference:
@@ -124,7 +123,7 @@ def add_missing_line(ws, difference, data, selected_color):
                 start_range = number_to_letter(1)
                 end_range = number_to_letter(len(str_diff))
                 ws.range(f'{start_range}{line_for_write}:{end_range}{line_for_write}').value = str_diff
-                # ws.range(f'{start_range}{line_for_write}:{end_range}{line_for_write}').api.Font.Color = r'#FF0000'
+                ws.range(f'{start_range}{line_for_write}:{end_range}{line_for_write}').font.color = r'#780000'
                 ws.range(f'{start_range}{line_for_write}:{end_range}{line_for_write}').color = selected_color
                 difference.remove(str_diff)
                 line_for_write += 1
@@ -132,7 +131,7 @@ def add_missing_line(ws, difference, data, selected_color):
                 start_range = number_to_letter(1)
                 end_range = number_to_letter(len(str_diff))
                 ws.range(f'{start_range}{line_for_write}:{end_range}{line_for_write}').value = str_diff
-                # ws.range(f'{start_range}{line_for_write}:{end_range}{line_for_write}').api.Font.Color = r'#FF0000'
+                ws.range(f'{start_range}{line_for_write}:{end_range}{line_for_write}').font.color = r'#780000'
                 start_range = number_to_letter(1 + len(str_data))
                 end_range = number_to_letter(len(str_data) + len(str_diff) - len(str_data))
                 ws.range(f'{start_range}{line_for_write}:{end_range}{line_for_write}').color = selected_color
@@ -146,23 +145,29 @@ def filter_missing_line(data):
 
 def del_none(data):
     """удаляет все значения None из списка"""
-    return list(list(point for point in item if point != None) for item in data)
+    if data:
+        if isinstance(data[0], list):
+            return list(list(point for point in item if point != None) for item in data)
+        else:
+            return list(item for item in data if item != None)
+    else:
+        return data
+
 
 
 def get_all_path():
     """читает пути для работы из файла"""
-    all_path = {}
-    with open(f'{os.getcwd()}\\config.ini', 'r', encoding='cp1251') as file:
-        for id, string in enumerate(file):
-            if id == 1:
-                all_path['dir'] = string.strip().lower()
-            elif id == 3:
-                all_path['file'] = string.strip().lower()
-    if len(all_path) < 2:
-        print('Выбраны пути по-умолчанию...')
-        return {'dir': r'\\fs\SHARE\Documents\OTDEL-IT\access_list.xlsx', 'file': r'\\fs\SHARE\Documents'}
-    else:
+    if os.path.exists(f'{os.getcwd()}\\config.ini'):
+        all_path = {}
+        with open(f'{os.getcwd()}\\config.ini', 'r', encoding='cp1251') as file:
+            for id, string in enumerate(file):
+                if id == 1:
+                    all_path['dir'] = string.strip().lower()
+                elif id == 3:
+                    all_path['file'] = string.strip().lower()
         return all_path
+    else:
+        return {'file': f'{os.getcwd()}\\access_list.xlsx', 'dir': f'{os.getcwd()}'}
 
 
 if __name__ == '__main__':
@@ -198,22 +203,32 @@ if __name__ == '__main__':
     if len(list(sheet.name for sheet in wb.sheets)) > 1:
         # инициализируем 'предыдущий' лист (ws)
         ws_previous = wb.sheets[1]
-        # заносим в переменную 'data_ws_previous' содержимое листа ws_previous без сервисной информации об отсутствубщих разрешениях
-        data_ws_previous = filter_missing_line(ws_previous.range('A1').expand().value)
-        # вычитаем содержимое текущего листа из предыдущего и удаляем все значения None из списков разрешений
-        difference_np = difference_lists(data_ws_now, data_ws_previous)
-        difference_np = del_none(difference_np)
-        # с помощью функции окрашиваем в зеленый цвет "появившиеся" разрешения
-        coloring_on_difference(ws_now, difference_np, data_ws_now, color['green'])
-        # вычитаем содержимое предыдущего листа из текущего и удаляем все значения None из списков разрешений
-        difference_pn = difference_lists(data_ws_previous, data_ws_now)
-        difference_pn = del_none(difference_pn)
-        # удаляем все значения None из списка разрешений
-        data_ws_now = del_none(data_ws_now)
-        # с помощью функции удаляем избыточную окрашенность списка разрешений
-        coloring_on_difference(ws_now, difference_pn, data_ws_now, color['white'])
-        # с помощью функции добавляем в конец листа список удаленных разрешений
-        add_missing_line(ws_now, difference_pn, data_ws_now, color['red'])
+        # заносим в переменную 'data_ws_previous' содержимое листа ws_previous
+        data_ws_previous = ws_previous.range('A1').expand().value
+
+        if data_ws_now and data_ws_previous:
+            """дальше по циклу идем только если оба листа с данными"""
+            # если на листе только одна строка, правим состав переменной и упаковываем список строки с список листа
+            if not isinstance(data_ws_previous[0], list):
+                data_ws_previous = [data_ws_previous]
+            if not isinstance(data_ws_now[0], list):
+                data_ws_now = [data_ws_now]
+
+            # удаляем из переменной сервисную информацию об отсутствубщих разрешениях
+            data_ws_previous = filter_missing_line(data_ws_previous)
+            # вычитаем содержимое текущего листа из предыдущего и удаляем все значения None из списков разрешений
+            difference_np = difference_lists(data_ws_now, data_ws_previous)
+            difference_np = del_none(difference_np)
+            # с помощью функции окрашиваем в зеленый цвет "появившиеся" разрешения
+            coloring_on_difference(ws_now, difference_np, data_ws_now, color['green'])
+            # вычитаем содержимое предыдущего листа из текущего и удаляем все значения None из списков разрешений
+            difference_pn = difference_lists(data_ws_previous, data_ws_now)
+            # удаляем все значения None из списка разрешений
+            data_ws_now = del_none(data_ws_now)
+            # с помощью функции удаляем избыточную окрашенность списка разрешений
+            coloring_on_difference(ws_now, difference_pn, data_ws_now, color['white'])
+            # с помощью функции добавляем в конец листа список удаленных разрешений
+            add_missing_line(ws_now, difference_pn, data_ws_now, color['red'])
 
     # сохраняем книгу
     wb.save(file_path)
@@ -221,4 +236,3 @@ if __name__ == '__main__':
     wb.app.quit()
     # с помощью функции выставляем оптимальное значение ширины стролбцов
     auto_size_column(file_path, ws_now_name)
-
