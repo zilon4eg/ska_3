@@ -102,10 +102,13 @@ def coloring_on_difference(ws, difference, data, selected_color):
     """
     for id, str_data in enumerate(data):
         for str_diff in difference:
+            print(difference)
+            print(str_diff)
             if str_data[0] == str_diff[0] and str_data[1] == str_diff[1]:
                 start_range = number_to_letter(1)
                 end_range = number_to_letter(len(str_diff))
                 ws.range(f'{start_range}{id + 1}:{end_range}{id + 1}').color = selected_color
+                print(f'{start_range}{id + 1}:{end_range}{id + 1}')
 
 
 def add_missing_line(ws, difference, data, selected_color):
@@ -223,6 +226,7 @@ if __name__ == '__main__':
             coloring_on_difference(ws_now, difference_np, data_ws_now, color['green'])
             # вычитаем содержимое предыдущего листа из текущего и удаляем все значения None из списков разрешений
             difference_pn = difference_lists(data_ws_previous, data_ws_now)
+            difference_pn = del_none(difference_pn)
             # удаляем все значения None из списка разрешений
             data_ws_now = del_none(data_ws_now)
             # с помощью функции удаляем избыточную окрашенность списка разрешений
